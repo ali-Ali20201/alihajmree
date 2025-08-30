@@ -389,7 +389,7 @@ async def on_topup_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photo_id = "AgACAgQAAxkBAYkui2ixsUvmCDPQVMDpOvFzFISV2TEIAAKeyjEbDEyQUc4oaicsvccZAQADAgADcwADNgQ" 
 
         # يمكنك إضافة نص يظهر أسفل الصورة (اختياري)
-        caption_text = f"عنوان شام كاش:\n \n 9cd65bde642da2496b407f8941dc01"
+        caption_text = f"عنوان شام كاش:\n \n 9cd65bde642da2496b407f8941dc01 \n يلي بده يحول سوري او تركي يحول  و انا بضيفهم لرصيد البوت لا تاكل هم"
 
         # تأكد من أن هناك صورة أو كود ليرسل
         if not photo_id:
