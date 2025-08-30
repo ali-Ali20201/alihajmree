@@ -111,6 +111,20 @@ def init_db():
     conn.close()
     update_admins_list()
 
+def add_admin(user_id: int):
+    conn = sqlite3.connect('database.db')
+    cur = conn.cursor()
+    cur.execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (user_id,))
+    conn.commit()
+    conn.close()
+
+def remove_admin(user_id: int):
+    conn = sqlite3.connect('database.db')
+    cur = conn.cursor()
+    cur.execute("DELETE FROM admins WHERE user_id=?", (user_id,))
+    conn.commit()
+    conn.close()
+    
 def update_admins_list():
     global ADMIN_IDS
     admins_str = get_setting(SETTING_ADMINS)
@@ -119,6 +133,9 @@ def update_admins_list():
             ADMIN_IDS.update(int(uid.strip()) for uid in admins_str.split(',') if uid.strip())
         except ValueError:
             logger.error("Invalid ADMINS setting format. Please use comma-separated integers.")
+
+
+    
 
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
@@ -230,21 +247,15 @@ MAIN_MENU = InlineKeyboardMarkup([
     [InlineKeyboardButton("🗞️ الأخبار", callback_data="NEWS")],
 ])
 
+
 def admin_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📂 إدارة القوائم", callback_data="ADM_CATS")],
         [InlineKeyboardButton("🛒 إدارة المنتجات", callback_data="ADM_PRODS")],
         [InlineKeyboardButton("👤 إدارة المستخدمين", callback_data="ADM_USERS")],
         [InlineKeyboardButton("⚙️ الإعدادات", callback_data="ADM_SETTINGS")],
-        [InlineKeyboardButton("📜 إدارة الاشتراكات", callback_data="ADM_SUBS")],
     ])
 
-def subs_menu_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ آيدي مجموعة الاشتراكات", callback_data="SET_GROUP_SUBS")],
-        [InlineKeyboardButton("🗓️ آيدي مجموعة انتهاء الاشتراكات", callback_data="SET_GROUP_EXPIRE")],
-        [InlineKeyboardButton("⬅️ رجوع", callback_data="ADM_BACK")],
-    ])
 
 def cats_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -283,6 +294,7 @@ def settings_menu_kb() -> InlineKeyboardMarkup:
     ])
 
 
+
 # --------------------- نصوص مساعدة ---------------------
 def account_text(u_row: sqlite3.Row) -> str:
     return (f"👤 معلومات حسابك:\n"
@@ -308,6 +320,11 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         disable_web_page_preview=True,
     )
 
+# الأزرار لقائمة السجل
+
+
+
+
 async def show_account(update: Update, context: ContextTypes.DEFAULT_TYPE, as_new: bool = True):
     ensure_user(update.effective_user)
     u = get_user(update.effective_user.id)
@@ -315,6 +332,8 @@ async def show_account(update: Update, context: ContextTypes.DEFAULT_TYPE, as_ne
         await update.effective_chat.send_message(account_text(u), parse_mode=ParseMode.HTML)
     else:
         await update.callback_query.edit_message_text(account_text(u), parse_mode=ParseMode.HTML)
+
+
 
 # --------------------- القوائم العامة (شراء/شحن/دعم) ---------------------
 async def on_main_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -389,7 +408,7 @@ async def on_topup_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photo_id = "AgACAgQAAxkBAYkui2ixsUvmCDPQVMDpOvFzFISV2TEIAAKeyjEbDEyQUc4oaicsvccZAQADAgADcwADNgQ" 
 
         # يمكنك إضافة نص يظهر أسفل الصورة (اختياري)
-        caption_text = f"عنوان شام كاش:\n \n 9cd65bde642da2496b407f8941dc01 \n يلي بده يحول سوري او تركي يحول  و انا بضيفهم لرصيد البوت لا تاكل هم"
+        caption_text = f"عنوان شام كاش:\n \n 9cd65bde642da2496b407f8941dc01 \n إذا كنت تريد تحويل الليرة السورية أو الليرة التركية فحول انا احولهم لحسابك ليصبحوا رصيد بالدولار لا تقلق😁"
 
         # تأكد من أن هناك صورة أو كود ليرسل
         if not photo_id:
@@ -827,6 +846,7 @@ async def on_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ------------------- الرسالة الافتراضية -------------------
     await update.message.reply_text("اختر إجراءً من الأزرار.", reply_markup=main_menu_kb())
     await update.message.reply_text("اختر إجراءً من الأزرار.", reply_markup=main_menu_kb())
+
 
 # ----------- أزرار مجموعة الشحن/الطلبات (للأدمن فقط) ---------
 async def on_group_actions(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1566,27 +1586,27 @@ async def on_any_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
-def main():
-    init_db()
+def main() -> None:
+
+    # يجب أن يتم تعريف المتغير 'app' هنا
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # الأوامر: /start و /admin
+    # الأوامر
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("admin", cmd_admin))
 
-    # معالجة رسائل المستخدم (النصوص)
+    # معالجة الرسائل
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_user_message))
 
-    # معالجة جميع أزرار الـ Callback
-    app.add_handler(CallbackQueryHandler(on_any_callback, pattern=r"^(REQUEST_SHAM_TOPUP|MENU|BACK_TO_HOME|...)"))
 
-    # ❗ تم تعديل هذا السطر لحل المشكلة
-    app.add_handler(CallbackQueryHandler(on_group_actions, pattern=r"^(TP_|ORD_).*"))
+    # معالجات الأزرار الأخرى
+    # تأكد أن on_admin_buttons يأتي قبل on_any_callback إذا كان يحتوي على أنماط عامة
+    app.add_handler(CallbackQueryHandler(on_admin_buttons, pattern=r"^(ADM_.*|PROD_.*|CAT_.*)"))
+    app.add_handler(CallbackQueryHandler(on_any_callback))
 
-    
-
+    # تأكد من أن هذه الأسطر تأتي في نهاية الدالة
     logger.info("Bot is up.")
-    app.run_polling(close_loop=False)
+    app.run_polling()
 
 
 if __name__ == "__main__":
